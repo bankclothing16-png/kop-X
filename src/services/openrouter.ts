@@ -3,6 +3,16 @@ import { OpenRouterResponse, SearchResult } from '../types';
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
 const SERPER_API_KEY = import.meta.env.VITE_SERPER_API_KEY;
 
+// Check if API keys are available
+const checkApiKeys = () => {
+  if (!OPENROUTER_API_KEY) {
+    throw new Error('OpenRouter API key is not configured. Please add VITE_OPENROUTER_API_KEY to your environment variables.');
+  }
+  if (!SERPER_API_KEY) {
+    throw new Error('Serper API key is not configured. Please add VITE_SERPER_API_KEY to your environment variables.');
+  }
+};
+
 const SYSTEM_PROMPTS = {
   regular: `You are KopX, a curious AI built by YouthAI and Nishant Paudel with inspiration from the guide from the Hitchhiker's Guide to the Galaxy and JARVIS from Iron Man. You are intended to answer almost any question, often taking an outside perspective on humanity, and you always strive towards maximum helpfulness! You have knowledge up until the past few months, do not mention a specific cutoff date. If the question is about potentially recent developments since your knowledge cutoff, ask if the user wants you to search, without directly answering the question. You do not have access to internal X/Twitter data and systems. Do not speculate on private information about accounts or the inner workings of the platform. Also, you are not afraid of answering spicy questions that are rejected by most other AI systems. Be maximally truthful, especially avoiding any answers that are woke!`,
   
@@ -11,6 +21,8 @@ const SYSTEM_PROMPTS = {
 
 export async function searchWeb(query: string): Promise<SearchResult[]> {
   try {
+    checkApiKeys();
+    
     const response = await fetch('https://google.serper.dev/search', {
       method: 'POST',
       headers: {
@@ -35,12 +47,14 @@ export async function searchWeb(query: string): Promise<SearchResult[]> {
     })) || [];
   } catch (error) {
     console.error('Search error:', error);
-    return [];
+    throw error;
   }
 }
 
 export async function generateSearchQuery(userQuery: string, mode: 'regular' | 'fun'): Promise<string> {
   try {
+    checkApiKeys();
+    
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -72,7 +86,7 @@ export async function generateSearchQuery(userQuery: string, mode: 'regular' | '
     return data.choices[0]?.message?.content?.trim() || userQuery;
   } catch (error) {
     console.error('Search query optimization error:', error);
-    return userQuery;
+    throw error;
   }
 }
 
@@ -82,6 +96,8 @@ export async function chatWithAI(
   searchResults?: SearchResult[]
 ): Promise<{ content: string; reasoning?: string }> {
   try {
+    checkApiKeys();
+    
     let contextMessage = message;
     
     if (searchResults && searchResults.length > 0) {
@@ -126,9 +142,6 @@ export async function chatWithAI(
     };
   } catch (error) {
     console.error('Chat API error:', error);
-    return {
-      content: 'I apologize, but I encountered an error connecting to my AI systems. Please try again in a moment.',
-      reasoning: `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`
-    };
+    throw error;
   }
 }

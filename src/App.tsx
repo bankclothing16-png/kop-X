@@ -66,10 +66,20 @@ function App() {
     } catch (error) {
       console.error('Error handling message:', error);
       
+      let errorContent = 'I apologize, but I encountered an error processing your request.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('API key')) {
+          errorContent = 'Configuration Error: API keys are not properly set up. Please check your environment variables.';
+        } else if (error.message.includes('Failed to fetch') || error.message.includes('network')) {
+          errorContent = 'Network Error: Unable to connect to AI services. Please check your internet connection and try again.';
+        }
+      }
+      
       const errorMessage: Message = {
         id: uuidv4(),
         type: 'assistant',
-        content: 'I apologize, but I encountered an error processing your request. Please try again.',
+        content: errorContent,
         reasoning: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
         timestamp: new Date()
       };
