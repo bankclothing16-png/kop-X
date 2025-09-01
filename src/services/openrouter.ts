@@ -55,11 +55,15 @@ export async function generateSearchQuery(userQuery: string, mode: 'regular' | '
   try {
     checkApiKeys();
     
+    console.log('Optimizing search query for:', userQuery);
+    
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'KopX AI Chat'
       },
       body: JSON.stringify({
         model: 'deepseek/deepseek-chat-v3.1:free',
@@ -78,15 +82,21 @@ export async function generateSearchQuery(userQuery: string, mode: 'regular' | '
       }),
     });
 
+    console.log('Search query optimization response status:', response.status);
+
     if (!response.ok) {
-      throw new Error('Failed to optimize search query');
+      const errorText = await response.text();
+      console.error('Search query optimization error:', errorText);
+      throw new Error(`Failed to optimize search query: ${response.status} - ${errorText}`);
     }
 
     const data: OpenRouterResponse = await response.json();
+    console.log('Optimized query result:', data);
     return data.choices[0]?.message?.content?.trim() || userQuery;
   } catch (error) {
     console.error('Search query optimization error:', error);
-    throw error;
+    // Fallback to original query if optimization fails
+    return userQuery;
   }
 }
 
@@ -106,11 +116,18 @@ export async function chatWithAI(
       ).join('\n')}\n\nUser Question: ${message}`;
     }
 
+    console.log('Sending chat request with mode:', mode);
+    console.log('Context message length:', contextMessage.length);
+
+    console.log('Sending request to OpenRouter...');
+    
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'KopX AI Chat'
       },
       body: JSON.stringify({
         model: 'deepseek/deepseek-chat-v3.1:free',
@@ -126,19 +143,40 @@ export async function chatWithAI(
         ],
         temperature: mode === 'fun' ? 0.8 : 0.7,
         max_tokens: 2000,
-        stream: false
+        stream: false,
+        reasoning: true
+        reasoning: true
       }),
     });
 
+    console.log('Chat API response status:', response.status);
+
+    console.log('Response status:', response.status);
+    
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
+      const errorText = await response.text();
+      console.error('Chat API error response:', errorText);
+      throw new Error(`API request failed: ${response.status} - ${errorText}`);
+      console.error('API Error Response:', errorText);
+      throw new Error(`API request failed: ${response.status} - ${errorText}`);
     }
 
     const data: OpenRouterResponse = await response.json();
+    console.log('Chat API response data:', data);
+    console.log('API Response:', data);
+    
+    if (!data.choices || data.choices.length === 0) {
+      throw new Error('No response choices received from API');
+    }
+    
+    const choice = data.choices[0];
+    if (!choice.message) {
+      throw new Error('No message content in API response');
+    }
     
     return {
-      content: data.choices[0]?.message?.content || 'I apologize, but I encountered an error processing your request.',
-      reasoning: data.choices[0]?.message?.reasoning
+      content: choice.message.content || 'I apologize, but I received an empty response.',
+      reasoning: choice.message.reasoning
     };
   } catch (error) {
     console.error('Chat API error:', error);

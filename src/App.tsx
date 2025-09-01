@@ -73,6 +73,14 @@ function App() {
           errorContent = 'Configuration Error: API keys are not properly set up. Please check your environment variables.';
         } else if (error.message.includes('Failed to fetch') || error.message.includes('network')) {
           errorContent = 'Network Error: Unable to connect to AI services. Please check your internet connection and try again.';
+        } else if (error.message.includes('401')) {
+          errorContent = 'Authentication Error: Invalid API key. Please check your OpenRouter API key configuration.';
+        } else if (error.message.includes('429')) {
+          errorContent = 'Rate Limit Error: Too many requests. Please wait a moment and try again.';
+        } else if (error.message.includes('500')) {
+          errorContent = 'Server Error: The AI service is temporarily unavailable. Please try again later.';
+        } else {
+          errorContent = `Error: ${error.message}`;
         }
       }
       
